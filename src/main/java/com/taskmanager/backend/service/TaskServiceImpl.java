@@ -2,6 +2,8 @@ package com.taskmanager.backend.service;
 
 import com.taskmanager.backend.dto.TaskRequest;
 import com.taskmanager.backend.dto.TaskResponse;
+import com.taskmanager.backend.exception.AccessDeniedException;
+import com.taskmanager.backend.exception.ResourceNotFoundException;
 import com.taskmanager.backend.model.Task;
 import com.taskmanager.backend.model.User;
 import com.taskmanager.backend.repository.TaskRepository;
@@ -83,15 +85,15 @@ public class TaskServiceImpl implements TaskService {
 
     private User getUserByUsername(String username) {
         return userRepository.findByUsername(username)
-                .orElseThrow(() -> new RuntimeException("User not found: " + username));
+                .orElseThrow(() -> new ResourceNotFoundException("User", "username", username));
     }
 
     private Task getTaskAndValidateOwnership(Long id, String username) {
         Task task = taskRepository.findByIdAndIsDeletedFalse(id)
-                .orElseThrow(() -> new RuntimeException("Task not found with id: " + id));
+                .orElseThrow(() -> new ResourceNotFoundException("Task", "id", id));
 
         if (!task.getUser().getUsername().equals(username)) {
-            throw new RuntimeException("You don't have permission to access this task");
+            throw new AccessDeniedException("You don't have permission to access this task");
         }
 
         return task;
