@@ -67,5 +67,5 @@ Desktop.ini
 application-local.properties
 application-prod.properties
 
-# Reference file (confidential development guide)
 REFERENCE.md
+README.md
