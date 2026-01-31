@@ -14,23 +14,36 @@ import java.util.Optional;
 @Repository
 public interface TaskRepository extends JpaRepository<Task, Long> {
 
-    Page<Task> findByUserAndIsDeletedFalse(User user, Pageable pageable);
+        Page<Task> findByUserAndIsDeletedFalse(User user, Pageable pageable);
 
-    Page<Task> findByUserAndStatusAndIsDeletedFalse(User user, Task.Status status, Pageable pageable);
+        Page<Task> findByUserAndStatusAndIsDeletedFalse(User user, Task.Status status, Pageable pageable);
 
-    Page<Task> findByUserAndPriorityAndIsDeletedFalse(User user, Task.Priority priority, Pageable pageable);
+        Page<Task> findByUserAndPriorityAndIsDeletedFalse(User user, Task.Priority priority, Pageable pageable);
 
-    Page<Task> findByUserAndStatusAndPriorityAndIsDeletedFalse(
-            User user, Task.Status status, Task.Priority priority, Pageable pageable);
+        Page<Task> findByUserAndStatusAndPriorityAndIsDeletedFalse(
+                        User user, Task.Status status, Task.Priority priority, Pageable pageable);
 
-    Optional<Task> findByIdAndIsDeletedFalse(Long id);
+        Optional<Task> findByIdAndIsDeletedFalse(Long id);
 
-    @Query("SELECT t FROM Task t WHERE t.user = :user AND t.isDeleted = false " +
-            "AND (:status IS NULL OR t.status = :status) " +
-            "AND (:priority IS NULL OR t.priority = :priority)")
-    Page<Task> findTasksWithFilters(
-            @Param("user") User user,
-            @Param("status") Task.Status status,
-            @Param("priority") Task.Priority priority,
-            Pageable pageable);
+        @Query("SELECT t FROM Task t WHERE t.user = :user AND t.isDeleted = false " +
+                        "AND (:status IS NULL OR t.status = :status) " +
+                        "AND (:priority IS NULL OR t.priority = :priority)")
+        Page<Task> findTasksWithFilters(
+                        @Param("user") User user,
+                        @Param("status") Task.Status status,
+                        @Param("priority") Task.Priority priority,
+                        Pageable pageable);
+
+        // ==================== ANALYTICS METHODS ====================
+
+        long countByUserAndIsDeletedFalse(User user);
+
+        long countByUserAndStatusAndIsDeletedFalse(User user, Task.Status status);
+
+        long countByUserAndPriorityAndIsDeletedFalse(User user, Task.Priority priority);
+
+        @Query("SELECT COUNT(t) FROM Task t WHERE t.user = :user AND t.isDeleted = false " +
+                        "AND t.dueDate < :now AND t.status <> :excludeStatus")
+        long countOverdueTasks(@Param("user") User user, @Param("now") java.time.LocalDateTime now,
+                        @Param("excludeStatus") Task.Status excludeStatus);
 }

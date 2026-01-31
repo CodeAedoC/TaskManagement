@@ -225,16 +225,3 @@ Access Swagger UI: `http://localhost:8080/swagger-ui.html`
 * ✅ Role-based access control
 * ✅ Global exception handling
 * ✅ OpenAPI/Swagger documentation
-
----
-
-## 👨‍💻 10. Author
-
-**Jatin**  
-Backend Engineering Student
-
----
-
-## 📄 License
-
-This project is for educational purposes only.

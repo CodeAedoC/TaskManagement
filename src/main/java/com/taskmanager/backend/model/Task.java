@@ -46,6 +46,9 @@ public class Task {
     @Builder.Default
     private Boolean isDeleted = false;
 
+    @Column(name = "attachment_path")
+    private String attachmentPath;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id", nullable = false)
     private User user;

@@ -9,6 +9,10 @@ import com.taskmanager.backend.model.User;
 import com.taskmanager.backend.repository.TaskRepository;
 import com.taskmanager.backend.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
+import org.springframework.cache.annotation.Caching;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -16,6 +20,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class TaskServiceImpl implements TaskService {
 
     private final TaskRepository taskRepository;
@@ -24,7 +29,9 @@ public class TaskServiceImpl implements TaskService {
 
     @Override
     @Transactional
+    @CacheEvict(value = { "tasks", "analytics" }, allEntries = true)
     public TaskResponse createTask(TaskRequest taskRequest, String username) {
+        log.debug("Creating task for user: {} - cache evicted", username);
         User user = getUserByUsername(username);
 
         Task task = Task.builder()
@@ -49,6 +56,7 @@ public class TaskServiceImpl implements TaskService {
 
     @Override
     @Transactional(readOnly = true)
+    @Cacheable(value = "tasks", key = "#username + '_' + #status + '_' + #priority + '_' + #pageable.pageNumber + '_' + #pageable.pageSize")
     public Page<TaskResponse> getAllTasks(String username, Task.Status status, Task.Priority priority,
             Pageable pageable) {
         User user = getUserByUsername(username);
@@ -58,14 +66,22 @@ public class TaskServiceImpl implements TaskService {
 
     @Override
     @Transactional(readOnly = true)
+    @Cacheable(value = "taskById", key = "#id + '_' + #username")
     public TaskResponse getTaskById(Long id, String username) {
+        log.debug("Fetching task {} from database - result will be cached", id);
         Task task = getTaskAndValidateOwnership(id, username);
         return mapToResponse(task);
     }
 
     @Override
     @Transactional
+    @Caching(evict = {
+            @CacheEvict(value = "tasks", allEntries = true),
+            @CacheEvict(value = "taskById", key = "#id + '_' + #username"),
+            @CacheEvict(value = "analytics", allEntries = true)
+    })
     public TaskResponse updateTask(Long id, TaskRequest taskRequest, String username) {
+        log.debug("Updating task {} - cache evicted", id);
         Task task = getTaskAndValidateOwnership(id, username);
 
         task.setTitle(taskRequest.getTitle());
@@ -84,7 +100,13 @@ public class TaskServiceImpl implements TaskService {
 
     @Override
     @Transactional
+    @Caching(evict = {
+            @CacheEvict(value = "tasks", allEntries = true),
+            @CacheEvict(value = "taskById", key = "#id + '_' + #username"),
+            @CacheEvict(value = "analytics", allEntries = true)
+    })
     public void deleteTask(Long id, String username) {
+        log.debug("Deleting task {} - cache evicted", id);
         Task task = getTaskAndValidateOwnership(id, username);
         // Soft delete
         task.setIsDeleted(true);
@@ -118,6 +140,7 @@ public class TaskServiceImpl implements TaskService {
                 .createdAt(task.getCreatedAt())
                 .updatedAt(task.getUpdatedAt())
                 .username(task.getUser().getUsername())
+                .attachmentPath(task.getAttachmentPath())
                 .build();
     }
 }
