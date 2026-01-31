@@ -8,6 +8,7 @@ import com.taskmanager.backend.model.Role;
 import com.taskmanager.backend.model.User;
 import com.taskmanager.backend.repository.RoleRepository;
 import com.taskmanager.backend.repository.UserRepository;
+import com.taskmanager.backend.service.EmailService;
 import com.taskmanager.backend.util.JwtUtils;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
@@ -26,9 +27,11 @@ import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.LocalDateTime;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.UUID;
 import java.util.stream.Collectors;
 
 @RestController
@@ -42,11 +45,12 @@ public class AuthController {
         private final RoleRepository roleRepository;
         private final PasswordEncoder passwordEncoder;
         private final JwtUtils jwtUtils;
+        private final EmailService emailService;
 
-        @Operation(summary = "Register a new user", description = "Creates a new user account with ROLE_USER")
+        @Operation(summary = "Register a new user", description = "Creates a new user account and sends verification email")
         @ApiResponses(value = {
-                        @ApiResponse(responseCode = "200", description = "User registered successfully", content = @Content(schema = @Schema(implementation = MessageResponse.class))),
-                        @ApiResponse(responseCode = "400", description = "Username or email already exists", content = @Content(schema = @Schema(implementation = MessageResponse.class)))
+                        @ApiResponse(responseCode = "200", description = "User registered - verification email sent"),
+                        @ApiResponse(responseCode = "400", description = "Username or email already exists")
         })
         @PostMapping("/register")
         public ResponseEntity<?> registerUser(@Valid @RequestBody RegisterRequest registerRequest) {
@@ -60,10 +64,16 @@ public class AuthController {
                                         .body(new MessageResponse("Error: Email is already in use!"));
                 }
 
+                // Generate verification token
+                String verificationToken = UUID.randomUUID().toString();
+
                 User user = User.builder()
                                 .username(registerRequest.getUsername())
                                 .email(registerRequest.getEmail())
                                 .password(passwordEncoder.encode(registerRequest.getPassword()))
+                                .emailVerified(false)
+                                .verificationToken(verificationToken)
+                                .verificationTokenExpiry(LocalDateTime.now().plusHours(24))
                                 .build();
 
                 Set<Role> roles = new HashSet<>();
@@ -77,16 +87,91 @@ public class AuthController {
 
                 userRepository.save(user);
 
-                return ResponseEntity.ok(new MessageResponse("User registered successfully!"));
+                // Send verification email
+                emailService.sendVerificationEmail(user.getEmail(), user.getUsername(), verificationToken);
+
+                return ResponseEntity.ok(new MessageResponse(
+                                "User registered! Please check your email to verify your account."));
+        }
+
+        @Operation(summary = "Verify email", description = "Verify user email using token from email link")
+        @ApiResponses(value = {
+                        @ApiResponse(responseCode = "200", description = "Email verified successfully"),
+                        @ApiResponse(responseCode = "400", description = "Invalid or expired token")
+        })
+        @GetMapping("/verify-email")
+        public ResponseEntity<?> verifyEmail(@RequestParam String token) {
+                User user = userRepository.findByVerificationToken(token)
+                                .orElse(null);
+
+                if (user == null) {
+                        return ResponseEntity.badRequest()
+                                        .body(new MessageResponse("Error: Invalid verification token!"));
+                }
+
+                if (user.getVerificationTokenExpiry().isBefore(LocalDateTime.now())) {
+                        return ResponseEntity.badRequest()
+                                        .body(new MessageResponse(
+                                                        "Error: Verification token has expired! Please register again."));
+                }
+
+                user.setEmailVerified(true);
+                user.setVerificationToken(null);
+                user.setVerificationTokenExpiry(null);
+                userRepository.save(user);
+
+                return ResponseEntity.ok(new MessageResponse("Email verified successfully! You can now login."));
+        }
+
+        @Operation(summary = "Resend verification email", description = "Resend verification email to user")
+        @PostMapping("/resend-verification")
+        public ResponseEntity<?> resendVerification(@RequestParam String email) {
+                User user = userRepository.findByEmail(email)
+                                .orElse(null);
+
+                if (user == null) {
+                        return ResponseEntity.badRequest()
+                                        .body(new MessageResponse("Error: User not found!"));
+                }
+
+                if (user.getEmailVerified()) {
+                        return ResponseEntity.badRequest()
+                                        .body(new MessageResponse("Email is already verified!"));
+                }
+
+                // Generate new token
+                String newToken = UUID.randomUUID().toString();
+                user.setVerificationToken(newToken);
+                user.setVerificationTokenExpiry(LocalDateTime.now().plusHours(24));
+                userRepository.save(user);
+
+                emailService.sendVerificationEmail(user.getEmail(), user.getUsername(), newToken);
+
+                return ResponseEntity.ok(new MessageResponse("Verification email sent!"));
         }
 
         @Operation(summary = "Authenticate user", description = "Login with username and password to get JWT token")
         @ApiResponses(value = {
-                        @ApiResponse(responseCode = "200", description = "Authentication successful", content = @Content(schema = @Schema(implementation = AuthResponse.class))),
-                        @ApiResponse(responseCode = "401", description = "Invalid credentials")
+                        @ApiResponse(responseCode = "200", description = "Authentication successful"),
+                        @ApiResponse(responseCode = "401", description = "Invalid credentials or email not verified")
         })
         @PostMapping("/login")
         public ResponseEntity<?> authenticateUser(@Valid @RequestBody LoginRequest loginRequest) {
+                // Check if user exists and email is verified
+                User user = userRepository.findByUsername(loginRequest.getUsername())
+                                .orElse(null);
+
+                if (user == null) {
+                        return ResponseEntity.badRequest()
+                                        .body(new MessageResponse("Error: Invalid credentials!"));
+                }
+
+                if (!user.getEmailVerified()) {
+                        return ResponseEntity.badRequest()
+                                        .body(new MessageResponse(
+                                                        "Error: Please verify your email before logging in!"));
+                }
+
                 Authentication authentication = authenticationManager.authenticate(
                                 new UsernamePasswordAuthenticationToken(
                                                 loginRequest.getUsername(),
@@ -96,8 +181,6 @@ public class AuthController {
                 String jwt = jwtUtils.generateJwtToken(authentication);
 
                 UserDetails userDetails = (UserDetails) authentication.getPrincipal();
-                User user = userRepository.findByUsername(userDetails.getUsername())
-                                .orElseThrow(() -> new RuntimeException("User not found"));
 
                 List<String> roles = userDetails.getAuthorities().stream()
                                 .map(item -> item.getAuthority())
