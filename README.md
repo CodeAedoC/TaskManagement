@@ -1,6 +1,6 @@
 # 🚀 Enterprise Task Management System
 
-> **Status:** ✅ v1.2  
+> **Status:** ✅ v1.3  
 > **Course:** Backend Engineering Final Project  
 > **Stack:** Spring Boot 3.2, Java 21, MySQL
 
@@ -19,7 +19,9 @@
 **Key Capabilities:**
 * **Security:** Role-Based Access Control (RBAC) with stateless JWT authentication.
 * **Email Verification:** Complete email verification flow with HTML templates.
-* **Performance:** Optimized database queries with Pagination and Sorting.
+* **Performance:** Caching with Caffeine, API rate limiting, and optimized queries with Pagination.
+* **File Management:** Secure file uploads with type validation and size limits.
+* **Analytics:** Dashboard APIs for task statistics and insights.
 * **Architecture:** Strict separation of concerns (Controller → Service → Repository).
 * **Reliability:** Global exception handling and strict input validation.
 
@@ -30,7 +32,7 @@ The project strictly follows a layered architecture:
 
 ```text
 src/main/java/com/taskmanager/backend/
-├── config/             # Security, Swagger, CORS, JWT configuration
+├── config/             # Security, Swagger, CORS, JWT, Caching, Rate Limiting
 ├── controller/         # REST Controllers (Request/Response handling)
 ├── dto/                # Data Transfer Objects (API Contracts)
 ├── model/              # Database Entities (JPA)
@@ -51,6 +53,8 @@ src/main/java/com/taskmanager/backend/
 | **Database** | MySQL 8.0+ | Relational Persistence |
 | **Security** | Spring Security 6 | Auth & Authorization |
 | **Token** | JWT (JJWT 0.12.3) | Stateless Session Management |
+| **Caching** | Caffeine | High-performance in-memory caching |
+| **Rate Limiting** | Bucket4j | Token bucket rate limiting algorithm |
 | **Docs** | OpenAPI (Swagger) | API Documentation |
 | **Email** | Spring Mail (SMTP) | Email Notifications |
 | **Config** | Spring DotEnv | Environment Variable Management |
@@ -84,6 +88,10 @@ MAIL_HOST=sandbox.smtp.mailtrap.io
 MAIL_PORT=2525
 MAIL_USERNAME=your_mailtrap_username
 MAIL_PASSWORD=your_mailtrap_password
+
+# File Upload Configuration
+FILE_UPLOAD_DIR=uploads
+FILE_MAX_SIZE=5242880
 ```
 
 ### Running the App
@@ -125,6 +133,26 @@ Access Swagger UI: `http://localhost:8080/swagger-ui.html`
 * [x] **Soft Delete:** Data is preserved for auditing
 * [x] **User Ownership:** Tasks are tied to authenticated users
 
+### 📎 File Attachments (v1.3)
+
+* [x] **Upload Attachments** – Attach files to tasks (max 5MB)
+* [x] **Download Attachments** – Retrieve file attachments
+* [x] **Delete Attachments** – Remove attached files
+* [x] **File Type Validation** – Allowed: PDF, DOC, DOCX, TXT, PNG, JPG, JPEG, GIF
+* [x] **Secure Storage** – Files stored with UUID naming to prevent conflicts
+
+### 📊 Analytics Dashboard (v1.3)
+
+* [x] **Analytics Summary** – Total tasks, completion rate, overdue count
+* [x] **Tasks by Status** – Breakdown by PENDING, IN_PROGRESS, COMPLETED, CANCELLED
+* [x] **Tasks by Priority** – Breakdown by LOW, MEDIUM, HIGH, CRITICAL
+
+### ⚡ Performance Optimizations (v1.3)
+
+* [x] **Caching (Caffeine)** – 10-minute TTL for tasks and analytics
+* [x] **Rate Limiting (Bucket4j)** – 100 requests/minute per IP address
+* [x] **Cache Eviction** – Automatic invalidation on data updates
+
 ### 🛡️ Quality & Stability
 
 * [x] **DTO Pattern:** Entities are never exposed to the client.
@@ -154,6 +182,22 @@ Access Swagger UI: `http://localhost:8080/swagger-ui.html`
 | `POST` | `/api/tasks` | Create a new task |
 | `PUT` | `/api/tasks/{id}` | Update an existing task |
 | `DELETE` | `/api/tasks/{id}` | Soft delete a task |
+
+### File Attachment Endpoints (v1.3)
+
+| Method | Endpoint | Description |
+| --- | --- | --- |
+| `POST` | `/api/tasks/{id}/attachment` | Upload file attachment (max 5MB) |
+| `GET` | `/api/tasks/{id}/attachment` | Download file attachment |
+| `DELETE` | `/api/tasks/{id}/attachment` | Delete file attachment |
+
+### Analytics Endpoints (v1.3)
+
+| Method | Endpoint | Description |
+| --- | --- | --- |
+| `GET` | `/api/analytics/summary` | Get analytics summary (totals, rates) |
+| `GET` | `/api/analytics/by-status` | Get task count by status |
+| `GET` | `/api/analytics/by-priority` | Get task count by priority |
 
 ### Query Parameters for Tasks
 
@@ -191,6 +235,7 @@ Access Swagger UI: `http://localhost:8080/swagger-ui.html`
 | `priority` | Enum | LOW, MEDIUM, HIGH, CRITICAL |
 | `status` | Enum | PENDING, IN_PROGRESS, COMPLETED, CANCELLED |
 | `dueDate` | LocalDateTime | Task due date |
+| `attachmentPath` | String | File attachment path (v1.3) |
 | `createdAt` | LocalDateTime | Creation timestamp |
 | `updatedAt` | LocalDateTime | Last update timestamp |
 | `isDeleted` | Boolean | Soft delete flag |
@@ -208,7 +253,15 @@ Access Swagger UI: `http://localhost:8080/swagger-ui.html`
 
 ## 📝 9. Changelog
 
-### v1.2 (Current)
+### v1.3 (Current)
+* ✅ Added Caffeine caching for tasks and analytics (10-min TTL)
+* ✅ Implemented API rate limiting with Bucket4j (100 req/min per IP)
+* ✅ Added file attachment support for tasks (upload, download, delete)
+* ✅ Built analytics dashboard APIs (summary, by-status, by-priority)
+* ✅ Added file type validation and size limits (5MB max)
+* ✅ Added `attachmentPath` field to Task entity
+
+### v1.2
 * ✅ Added email verification with HTML templates
 * ✅ Added resend verification endpoint
 * ✅ Improved verification email with clickable button design
