@@ -1,6 +1,6 @@
 # 🚀 Enterprise Task Management System
 
-> **Status:** ✅ v1.0 (Stable)
+> **Status:** ✅ v1.1 
 > **Course:** Backend Engineering Final Project
 > **Stack:** Spring Boot 3.x, Java 21, MySQL
 
@@ -75,6 +75,10 @@ DB_PASSWORD=your_local_password
 # JWT Secrets
 JWT_SECRET=your_secure_random_secret_key_minimum_32_chars
 JWT_EXPIRATION=86400000
+
+# Email Configuration (v1.1)
+MAIL_USERNAME=your_email@gmail.com
+MAIL_PASSWORD=your_app_password
 ```
 
 ### Running the App
@@ -108,6 +112,10 @@ Access Swagger UI: `http://localhost:8080/swagger-ui.html`
 * [x] **DTO Pattern:** Entities are never exposed to the client.
 * [x] **Validation:** `@Valid` checks on all inputs.
 * [x] **Error Handling:** Standardized JSON error responses.
+
+### 🔄 Integrations (v1.1)
+
+* [x] **Email Service:** Asynchronous SMTP email notifications when tasks are created.
 
 ---
 

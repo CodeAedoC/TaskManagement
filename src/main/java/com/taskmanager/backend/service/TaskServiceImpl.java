@@ -20,6 +20,7 @@ public class TaskServiceImpl implements TaskService {
 
     private final TaskRepository taskRepository;
     private final UserRepository userRepository;
+    private final EmailService emailService;
 
     @Override
     @Transactional
@@ -36,6 +37,13 @@ public class TaskServiceImpl implements TaskService {
                 .build();
 
         Task savedTask = taskRepository.save(task);
+
+        // --- INTEGRATION POINT: Email Notification ---
+        emailService.sendTaskAssignmentEmail(
+                user.getEmail(),
+                savedTask.getTitle(),
+                savedTask.getDueDate() != null ? savedTask.getDueDate().toString() : null);
+
         return mapToResponse(savedTask);
     }
 
