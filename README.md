@@ -1,4 +1,4 @@
-# 🚀 TaskFlow: Enterprise Task Management System
+# 🚀 Enterprise Task Management System
 
 > **Status:** ✅ v1.0 (Stable)
 > **Course:** Backend Engineering Final Project
