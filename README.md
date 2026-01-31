@@ -76,9 +76,11 @@ DB_PASSWORD=your_local_password
 JWT_SECRET=your_secure_random_secret_key_minimum_32_chars
 JWT_EXPIRATION=86400000
 
-# Email Configuration (v1.1)
-MAIL_USERNAME=your_email@gmail.com
-MAIL_PASSWORD=your_app_password
+# Email Configuration (Mailtrap - v1.1)
+MAIL_HOST=sandbox.smtp.mailtrap.io
+MAIL_PORT=2525
+MAIL_USERNAME=your_mailtrap_username
+MAIL_PASSWORD=your_mailtrap_password
 ```
 
 ### Running the App
